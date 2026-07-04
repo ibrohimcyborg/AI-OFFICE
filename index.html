@@ -72,12 +72,12 @@ const {useState} = React;
    XODIMLAR (ROBOTLAR) VA ULARNING AI MODELLARI
    ===================================================================== */
 const AGENTS = [
-  {id:'dir', name:'Dirijyor',   role:'boshqaruv',      model:'Gemini 3.1 Pro',   provider:'google',    color:'#7F77DD', soft:'#EEEDFE'},
+  {id:'dir', name:'Dirijyor',   role:'boshqaruv',      model:'Gemini 2.5 Flash',   provider:'google',    color:'#7F77DD', soft:'#EEEDFE'},
   {id:'tan', name:'Tanqidchi',  role:'nazorat',        model:'Claude Opus 4.8',  provider:'anthropic', color:'#D85A30', soft:'#FAECE7'},
   {id:'ijr', name:'Ijrochi',    role:'bajarish',       model:'Claude Opus 4.8',  provider:'anthropic', color:'#378ADD', soft:'#E6F1FB'},
-  {id:'str', name:'Strateg',    role:'reja',           model:'Gemini 3.1 Pro',   provider:'google',    color:'#D4537E', soft:'#FBEAF0'},
-  {id:'mol', name:'Moliyachi',  role:'pul-hisob',      model:'Gemini 3.1 Pro',   provider:'google',    color:'#1D9E75', soft:'#E1F5EE'},
-  {id:'boz', name:'Bozorchi',   role:'sotuv/bozor',    model:'Gemini 3.1 Pro',   provider:'google',    color:'#639922', soft:'#EAF3DE'},
+  {id:'str', name:'Strateg',    role:'reja',           model:'Gemini 2.5 Flash',   provider:'google',    color:'#D4537E', soft:'#FBEAF0'},
+  {id:'mol', name:'Moliyachi',  role:'pul-hisob',      model:'Gemini 2.5 Flash',   provider:'google',    color:'#1D9E75', soft:'#E1F5EE'},
+  {id:'boz', name:'Bozorchi',   role:'sotuv/bozor',    model:'Gemini 2.5 Flash',   provider:'google',    color:'#639922', soft:'#EAF3DE'},
   {id:'diz', name:'Dizayner',   role:'video/reklama',  model:'Higgsfield',       provider:'higgsfield',color:'#E24B4A', soft:'#FCEBEB'},
 ];
 const BOSS = {id:'bos', name:'Ibrohim — BOSS', color:'#EF9F27'};
@@ -151,7 +151,7 @@ async function callAgent(agent, task, transcript){
   // === GEMINI (Google) — HAQIQIY ULANISH ===
   if(agent.provider === 'google' && key){
     try{
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent', {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
         method:'POST',
         headers:{ 'x-goog-api-key': key, 'content-type':'application/json' },
         body: JSON.stringify({

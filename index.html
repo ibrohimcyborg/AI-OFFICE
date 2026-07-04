@@ -73,8 +73,8 @@ const {useState} = React;
    ===================================================================== */
 const AGENTS = [
   {id:'dir', name:'Dirijyor',   role:'boshqaruv',      model:'Gemini 2.5 Flash',   provider:'google',    color:'#7F77DD', soft:'#EEEDFE'},
-  {id:'tan', name:'Tanqidchi',  role:'nazorat',        model:'DeepSeek V4',      provider:'deepseek',  color:'#D85A30', soft:'#FAECE7'},
-  {id:'ijr', name:'Ijrochi',    role:'bajarish',       model:'DeepSeek V4',      provider:'deepseek',  color:'#378ADD', soft:'#E6F1FB'},
+  {id:'tan', name:'Tanqidchi',  role:'nazorat',        model:'OpenRouter · Llama 3.3', provider:'openrouter', color:'#D85A30', soft:'#FAECE7'},
+  {id:'ijr', name:'Ijrochi',    role:'bajarish',       model:'Groq · Llama 3.3',       provider:'groq',       color:'#378ADD', soft:'#E6F1FB'},
   {id:'str', name:'Strateg',    role:'reja',           model:'Gemini 2.5 Flash',   provider:'google',    color:'#D4537E', soft:'#FBEAF0'},
   {id:'mol', name:'Moliyachi',  role:'pul-hisob',      model:'Gemini 2.5 Flash',   provider:'google',    color:'#1D9E75', soft:'#E1F5EE'},
   {id:'boz', name:'Bozorchi',   role:'sotuv/bozor',    model:'Gemini 2.5 Flash',   provider:'google',    color:'#639922', soft:'#EAF3DE'},
@@ -169,28 +169,46 @@ async function callAgent(agent, task, transcript){
     }
   }
 
-  // === DEEPSEEK — HAQIQIY ULANISH (OpenAI-mos format) ===
-  if(agent.provider === 'deepseek' && key){
+  // === OPENROUTER — bepul, OpenAI-mos, brauzerga mos ===
+  if(agent.provider === 'openrouter' && key){
     try{
-      const r = await fetch('https://api.deepseek.com/chat/completions', {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method:'POST',
         headers:{ 'Authorization':'Bearer ' + key, 'content-type':'application/json' },
         body: JSON.stringify({
-          model:'deepseek-chat',
-          temperature:0.3,
-          max_tokens:700,
+          model:'meta-llama/llama-3.3-70b-instruct:free',
+          temperature:0.3, max_tokens:700,
           messages:[
             {role:'system', content: agentSystem(agent)},
             {role:'user', content: buildUser(agent, task, transcript)}
           ]
         })
       });
-      if(!r.ok){ const tx = await r.text(); return 'DeepSeek API xato (' + r.status + '): ' + tx.slice(0,220); }
+      if(!r.ok){ const tx = await r.text(); return 'OpenRouter xato (' + r.status + '): ' + tx.slice(0,220); }
       const d = await r.json();
-      return ((d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '').trim() || '(DeepSeek bosh javob qaytardi)';
-    }catch(e){
-      return 'Ulanish xatosi (DeepSeek): ' + e.message;
-    }
+      return ((d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '').trim() || '(OpenRouter bosh javob)';
+    }catch(e){ return 'Ulanish xatosi (OpenRouter): ' + e.message; }
+  }
+
+  // === GROQ — bepul, juda tez, OpenAI-mos ===
+  if(agent.provider === 'groq' && key){
+    try{
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:'POST',
+        headers:{ 'Authorization':'Bearer ' + key, 'content-type':'application/json' },
+        body: JSON.stringify({
+          model:'llama-3.3-70b-versatile',
+          temperature:0.3, max_tokens:700,
+          messages:[
+            {role:'system', content: agentSystem(agent)},
+            {role:'user', content: buildUser(agent, task, transcript)}
+          ]
+        })
+      });
+      if(!r.ok){ const tx = await r.text(); return 'Groq xato (' + r.status + '): ' + tx.slice(0,220); }
+      const d = await r.json();
+      return ((d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '').trim() || '(Groq bosh javob)';
+    }catch(e){ return 'Ulanish xatosi (Groq): ' + e.message; }
   }
 
   // (Higgsfield keyin shu uslubda qoshiladi.)
@@ -291,10 +309,12 @@ function App(){
   const [keysV,setKeysV] = useState(0);
   const [antKey,setAntKey] = useState(getKey('anthropic'));
   const [googKey,setGoogKey] = useState(getKey('google'));
-  const [dsKey,setDsKey] = useState(getKey('deepseek'));
+  const [orKey,setOrKey] = useState(getKey('openrouter'));
+  const [groqKey,setGroqKey] = useState(getKey('groq'));
   const antSaved = getKey('anthropic');
   const googSaved = getKey('google');
-  const dsSaved = getKey('deepseek');
+  const orSaved = getKey('openrouter');
+  const groqSaved = getKey('groq');
   void keysV;
 
   const wait = function(ms){ return new Promise(function(r){ setTimeout(r,ms); }); };
@@ -436,17 +456,24 @@ function App(){
           {googSaved ? '🟢 Gemini ulandi — Dirijyor, Strateg, Moliyachi, Bozorchi haqiqiy javob beradi.'
                      : '⚪ Google kaliti bilan Dirijyor, Strateg, Moliyachi, Bozorchi ishga tushadi.'}
           <br/>Kalitlar faqat shu brauzerda saqlanadi (localStorage), boshqa hech qayerga yuborilmaydi.
-          Kalitlar: Gemini — aistudio.google.com · DeepSeek — platform.deepseek.com · Claude — console.anthropic.com.
+          Kalitlar (hammasi bepul): Gemini — aistudio.google.com · OpenRouter — openrouter.ai · Groq — console.groq.com
         </div>
         <div className="kv">
-          <label>DeepSeek</label>
-          <input className="tin" type="password" placeholder="sk-..." value={dsKey}
-                 onChange={function(e){ setDsKey(e.target.value); }} style={{flex:1}}/>
-          <button className="btn primary" onClick={function(){ saveKey('deepseek', dsKey); setKeysV(function(v){return v+1;}); }}>Saqlash</button>
+          <label>OpenRouter (Tanqidchi)</label>
+          <input className="tin" type="password" placeholder="sk-or-..." value={orKey}
+                 onChange={function(e){ setOrKey(e.target.value); }} style={{flex:1}}/>
+          <button className="btn primary" onClick={function(){ saveKey('openrouter', orKey); setKeysV(function(v){return v+1;}); }}>Saqlash</button>
+        </div>
+        <div className="kv">
+          <label>Groq (Ijrochi)</label>
+          <input className="tin" type="password" placeholder="gsk_..." value={groqKey}
+                 onChange={function(e){ setGroqKey(e.target.value); }} style={{flex:1}}/>
+          <button className="btn primary" onClick={function(){ saveKey('groq', groqKey); setKeysV(function(v){return v+1;}); }}>Saqlash</button>
         </div>
         <div className="muted" style={{lineHeight:1.6}}>
-          {dsSaved ? '🟢 DeepSeek ulandi — Tanqidchi va Ijrochi shu bilan ishlaydi (boshqa "miya", Gemini\'ni tekshiradi).'
-                   : '⚪ DeepSeek kaliti bilan Tanqidchi va Ijrochi ishga tushadi.'}
+          {orSaved ? '🟢 OpenRouter ulandi — Tanqidchi.' : '⚪ OpenRouter: openrouter.ai → Keys (bepul).'}
+          {'  ·  '}
+          {groqSaved ? '🟢 Groq ulandi — Ijrochi.' : '⚪ Groq: console.groq.com → API Keys (bepul).'}
         </div>
       </div>
 

@@ -262,6 +262,8 @@ function App(){
   const [convo,setConvo] = useState([]);
   const [running,setRunning] = useState(false);
   const [activeTask,setActiveTask] = useState('');
+  const [followInput,setFollowInput] = useState('');
+  const [participants,setParticipants] = useState([]);
   const [keysV,setKeysV] = useState(0);
   const [antKey,setAntKey] = useState(getKey('anthropic'));
   const [googKey,setGoogKey] = useState(getKey('google'));
@@ -281,6 +283,7 @@ function App(){
     if(running) return;
     setRunning(true); setActiveTask(task); setConvo([]); setBubbles({}); setMeeting(true);
     const parts = pickAgents(task);
+    setParticipants(parts);
     setBubbles({bos:'Yangi vazifa: ' + (task.length>22?task.slice(0,22)+'…':task)});
     await wait(1200);
     const transcript = [];
@@ -297,6 +300,27 @@ function App(){
     }
     setSpeaking(null);
     setRunning(false);
+  }
+  async function followUp(){
+    const q = followInput.trim(); if(!q || running) return;
+    setRunning(true); setMeeting(true); setFollowInput('');
+    const bossEntry = {id:'bos', name:'Ibrohim (Bos)', color:'#EF9F27', body:q, model:''};
+    let transcript = convo.concat([bossEntry]);
+    setConvo(function(c){ return c.concat([bossEntry]); });
+    setBubbles({bos: q.length>22 ? q.slice(0,22)+'…' : q});
+    await wait(900);
+    const team = participants.length ? participants : pickAgents(q);
+    for(const a of team){
+      setSpeaking(a.id);
+      const text = await callAgent(a, activeTask || q, transcript);
+      setBubbles(function(b){ const n=Object.assign({},b); n[a.id]=(text.length>34?text.slice(0,34)+'…':text); return n; });
+      const entry = {id:a.id, name:a.name, color:a.color, body:text, model:a.model};
+      transcript = transcript.concat([entry]);
+      setConvo(function(c){ return c.concat([entry]); });
+      await wait(1000);
+      setBubbles(function(b){ const n=Object.assign({},b); delete n[a.id]; return n; });
+    }
+    setSpeaking(null); setRunning(false);
   }
   function endMeeting(){ setMeeting(false); setSpeaking(null); setBubbles({}); }
 
@@ -347,11 +371,19 @@ function App(){
             {convo.map(function(m,i){
               return (
                 <div className="msg" key={i}>
-                  <div className="who" style={{color:m.color}}>{m.name} · <span style={{color:'var(--tx3)'}}>{m.model}</span></div>
+                  <div className="who" style={{color:m.color}}>{m.name}{m.model ? ' · ' : ''}<span style={{color:'var(--tx3)'}}>{m.model}</span></div>
                   <div className="body">{m.body}</div>
                 </div>
               );
             })}
+            {convo.length>0 &&
+              <div style={{display:'flex',gap:8,marginTop:10}}>
+                <input className="tin" placeholder="Davom ettirish: javob yoki savol yozing…" value={followInput}
+                       onChange={function(e){ setFollowInput(e.target.value); }}
+                       onKeyDown={function(e){ if(e.key==='Enter') followUp(); }} disabled={running}/>
+                <button className="btn primary" onClick={followUp} disabled={running}>Yuborish</button>
+              </div>
+            }
           </div>
         </div>
       </div>

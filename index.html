@@ -110,7 +110,7 @@ function getKey(provider){ return (loadKeys()[provider] || '').trim(); }
 function agentSystem(agent){
   return 'Sen "' + agent.name + '" — Ibrohimning AI ofisidagi robot-xodimsan. Roling: ' + agent.role + '. '
     + 'Ibrohim (BOSS) Yangiyol/Toshkentda oltin savdo va "Kabir Exclusive" mebel biznesini yuritadi. '
-    + 'Ozbek tilida, qisqa (2-4 gap), aniq va amaliy javob ber. Ortiqcha muqaddimasiz, ozing rolingga mos hissa qosh.';
+    + 'Ozbek tilida aniq, amaliy va toliq javob ber — kerak bolsa batafsil (raqam, misol, aniq tavsiya bilan), lekin suvsiz. Ortiqcha muqaddimasiz, ozing rolingga mos aniq hissa qosh.';
 }
 function buildUser(agent, task, transcript){
   let u = 'Vazifa: ' + task + '\n\n';
@@ -157,7 +157,7 @@ async function callAgent(agent, task, transcript){
         body: JSON.stringify({
           system_instruction:{ parts:[{ text: agentSystem(agent) }] },
           contents:[{ role:'user', parts:[{ text: buildUser(agent, task, transcript) }] }],
-          generationConfig:{ maxOutputTokens: 600 }
+          generationConfig:{ temperature: 0.3, maxOutputTokens: 700, thinkingConfig:{ thinkingBudget: 0 } }
         })
       });
       if(!r.ok){ const tx = await r.text(); return 'Gemini API xato (' + r.status + '): ' + tx.slice(0,220); }

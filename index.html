@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ibrohim AI Ofisi</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --tx:#e7e9ee; --tx2:#a7adba; --tx3:#6f7688; --accent:#EF9F27; --accent2:#BA7517;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--tx);font-family:Arial,Helvetica,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px;}
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .top h1{font-size:20px;font-weight:700;margin:0;}
+  .top .sub{font-size:13px;color:var(--tx2);}
+  .btn{font-family:inherit;font-size:14px;padding:8px 14px;border-radius:var(--radius);border:1px solid var(--line);
+       background:var(--panel2);color:var(--tx);cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{border-color:#3a414f;}
+  .btn.primary{background:var(--accent);color:#241a06;border-color:var(--accent2);font-weight:700;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;}
+  @media(max-width:920px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;}
+  .card h2{font-size:15px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .stage{position:relative;height:360px;background:radial-gradient(circle at 50% 40%, #1c2029, #12151b);
+         border-radius:14px;border:1px solid var(--line);overflow:hidden;}
+  .floor{position:absolute;left:50%;top:56%;width:470px;height:280px;margin:-140px 0 0 -235px;
+         background:#1a1e27;border:1px solid #262b36;border-radius:26px;transform:rotateX(56deg);}
+  .tbl{position:absolute;left:50%;top:50%;width:150px;height:86px;margin:-43px 0 0 -75px;
+       background:#2a2f3a;border:1px solid #3a414f;border-radius:43px;transform:rotateX(56deg);}
+  .zonelbl{position:absolute;font-size:11px;font-weight:700;color:#5a6070;letter-spacing:.3px;}
+  .rob{position:absolute;transition:left 1.4s cubic-bezier(.4,0,.2,1),top 1.4s cubic-bezier(.4,0,.2,1);}
+  .rob .nm{font-size:11px;font-weight:700;text-align:center;margin-bottom:2px;}
+  .bob{animation:bob 1s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom;}
+  @keyframes bob{50%{transform:translateY(-3px);}}
+  .led{animation:led 1.4s infinite;}@keyframes led{0%,100%{opacity:1;}50%{opacity:.25;}}
+  .bub{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:6px;
+       background:#f4f6fa;color:#1a1e27;border-radius:10px;padding:5px 9px;font-size:11px;
+       white-space:nowrap;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.4);}
+  .bub::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);
+              border:5px solid transparent;border-top-color:#f4f6fa;}
+  .tin{width:100%;font-family:inherit;font-size:14px;padding:9px 11px;border-radius:10px;
+       border:1px solid var(--line);background:var(--panel2);color:var(--tx);}
+  .task{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);
+        border-radius:10px;padding:8px 10px;margin-bottom:8px;}
+  .task .tt{flex:1;font-size:14px;}
+  .chip{font-size:10.5px;padding:2px 8px;border-radius:20px;font-weight:700;}
+  .msg{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px;}
+  .msg .who{font-size:11px;font-weight:700;margin-bottom:3px;}
+  .msg .body{font-size:13px;color:var(--tx);line-height:1.5;white-space:pre-wrap;}
+  .muted{color:var(--tx3);font-size:12px;}
+  .rosterItem{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+  details{margin-top:10px;}summary{cursor:pointer;font-size:13px;color:var(--tx2);}
+  .kv{display:flex;gap:8px;align-items:center;margin:6px 0;}
+  .kv label{font-size:12px;color:var(--tx2);width:130px;flex:none;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const {useState} = React;
+
+/* =====================================================================
+   XODIMLAR (ROBOTLAR) VA ULARNING AI MODELLARI
+   ===================================================================== */
+const AGENTS = [
+  {id:'dir', name:'Dirijyor',   role:'boshqaruv',      model:'Gemini 3.1 Pro',   provider:'google',    color:'#7F77DD', soft:'#EEEDFE'},
+  {id:'tan', name:'Tanqidchi',  role:'nazorat',        model:'Claude Opus 4.8',  provider:'anthropic', color:'#D85A30', soft:'#FAECE7'},
+  {id:'ijr', name:'Ijrochi',    role:'bajarish',       model:'Claude Opus 4.8',  provider:'anthropic', color:'#378ADD', soft:'#E6F1FB'},
+  {id:'str', name:'Strateg',    role:'reja',           model:'Gemini 3.1 Pro',   provider:'google',    color:'#D4537E', soft:'#FBEAF0'},
+  {id:'mol', name:'Moliyachi',  role:'pul-hisob',      model:'Gemini 3.1 Pro',   provider:'google',    color:'#1D9E75', soft:'#E1F5EE'},
+  {id:'boz', name:'Bozorchi',   role:'sotuv/bozor',    model:'Gemini 3.1 Pro',   provider:'google',    color:'#639922', soft:'#EAF3DE'},
+  {id:'diz', name:'Dizayner',   role:'video/reklama',  model:'Higgsfield',       provider:'higgsfield',color:'#E24B4A', soft:'#FCEBEB'},
+];
+const BOSS = {id:'bos', name:'Ibrohim — BOSS', color:'#EF9F27'};
+
+/* Dirijyor qaysi vazifaga qaysi xodimlarni chaqirishini oddiy qoida bilan aniqlaydi. */
+function pickAgents(task){
+  const t = task.toLowerCase();
+  const picks = new Set(['dir']);
+  const rules = [
+    [['pul','narx','byudjet','foyda','xarajat','daromad','rentabel'], 'mol'],
+    [['bozor','raqob','mijoz','sot'], 'boz'],
+    [['reja','strateg','kelaj','kengay','rivoj'], 'str'],
+    [['dizayn','video','logo','banner','kontent','reklama'], 'diz'],
+    [['yoz','hisobla','jadval','tayyorla','bajar'], 'ijr'],
+  ];
+  rules.forEach(function(rl){ if(rl[0].some(function(k){return t.includes(k);})) picks.add(rl[1]); });
+  picks.add('tan');
+  if(picks.size < 3){ picks.add('str'); picks.add('mol'); }
+  return AGENTS.filter(function(a){ return picks.has(a.id); });
+}
+
+/* =====================================================================
+   API KALITLARI — faqat shu brauzerda (localStorage) saqlanadi.
+   ===================================================================== */
+const KEY_STORE = 'ibrohim_ai_ofis_keys';
+function loadKeys(){ try{ return JSON.parse(localStorage.getItem(KEY_STORE)) || {}; }catch(e){ return {}; } }
+function saveKey(provider, val){ const k = loadKeys(); k[provider] = (val||'').trim(); localStorage.setItem(KEY_STORE, JSON.stringify(k)); }
+function getKey(provider){ return (loadKeys()[provider] || '').trim(); }
+
+function agentSystem(agent){
+  return 'Sen "' + agent.name + '" — Ibrohimning AI ofisidagi robot-xodimsan. Roling: ' + agent.role + '. '
+    + 'Ibrohim (BOSS) Yangiyol/Toshkentda oltin savdo va "Kabir Exclusive" mebel biznesini yuritadi. '
+    + 'Ozbek tilida, qisqa (2-4 gap), aniq va amaliy javob ber. Ortiqcha muqaddimasiz, ozing rolingga mos hissa qosh.';
+}
+function buildUser(agent, task, transcript){
+  let u = 'Vazifa: ' + task + '\n\n';
+  if(transcript.length) u += 'Avvalgi xodimlar fikri:\n' + transcript.map(function(m){return m.name + ': ' + m.body;}).join('\n') + '\n\n';
+  u += 'Sen ' + agent.name + ' sifatida oz hissangni qosh.';
+  return u;
+}
+
+async function callAgent(agent, task, transcript){
+  const key = getKey(agent.provider);
+
+  // === CLAUDE (Anthropic) — HAQIQIY ULANISH ===
+  if(agent.provider === 'anthropic' && key){
+    try{
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'x-api-key': key,
+          'anthropic-version':'2023-06-01',
+          'content-type':'application/json',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body: JSON.stringify({
+          model:'claude-opus-4-8',
+          max_tokens:500,
+          system: agentSystem(agent),
+          messages:[{role:'user', content: buildUser(agent, task, transcript)}]
+        })
+      });
+      if(!r.ok){ const tx = await r.text(); return 'API xato (' + r.status + '): ' + tx.slice(0,220); }
+      const d = await r.json();
+      return d.content.map(function(b){return b.text||'';}).join('').trim();
+    }catch(e){
+      return 'Ulanish xatosi: ' + e.message + ' — kalitni yoki internetni tekshiring.';
+    }
+  }
+
+  // (Gemini / Higgsfield keyin shu uslubda qoshiladi.)
+
+  // === NAMUNA (MOCK) JAVOB — kalit yoq yoki hali ulanmagan ===
+  await new Promise(function(res){ setTimeout(res, 650 + Math.random()*500); });
+  const templ = {
+    dir:'"' + task + '" — bolaklarga boldim. Moliyachi va Bozorchidan hisob soraymiz, keyin Tanqidchi tekshiradi.',
+    mol:'Pul tomoni: taxminiy xarajat va foydani hisoblab chiqishim kerak. Aniq raqam uchun kirish malumot bering.',
+    boz:'Bozor tomoni: mijoz segmenti va raqobat narxini korib chiqaman. Toshkent boyicha taqqoslash foydali.',
+    str:'Strategik: kamida 2 yol bor — tez natija yoki bosqichma-bosqich. Har birining xavf-foydasi bor.',
+    diz:'Dizayn/video: mahsulotdan reklama-video tayyorlash mumkin. Higgsfield orqali qilamiz.',
+    ijr:'Bajaraman: matn/jadval/hisobni tayyorlab beraman, faqat aniq topshiriq bering.',
+    tan:'Tekshirdim: fikrlar mantiqan togri, lekin aniq raqamlarsiz qaror erta. Manba kerak.',
+  };
+  return (templ[agent.id] || (agent.name + ': ' + task + ' boyicha oz qismimni bajaraman.'))
+         + '  (namuna javob — ' + agent.model + ' ulanmagan)';
+}
+
+/* ============================ ROBOT SVG (Variant 1 — sanoat) ============================ */
+function Robot(props){
+  const s = props.color;
+  return (
+    <svg width="52" height="66" viewBox="0 0 52 66" aria-hidden="true">
+      <g className="bob">
+        <ellipse cx="26" cy="62" rx="13" ry="3" fill="rgba(0,0,0,.35)"/>
+        {props.crown && <polygon points="17,5 21,-1 26,4 31,-1 35,5" fill="#EF9F27" stroke="#BA7517" strokeWidth="1"/>}
+        <line x1="26" y1="12" x2="26" y2="6" stroke={s} strokeWidth="1.8"/>
+        <circle className="led" cx="26" cy="6" r="2.6" fill={s}/>
+        <rect x="12" y="12" width="28" height="19" rx="6" fill="#232833" stroke={s} strokeWidth="2"/>
+        <rect x="16" y="17" width="20" height="10" rx="3" fill="#0d1016"/>
+        <circle cx="22" cy="22" r="2.3" fill={s}/><circle cx="30" cy="22" r="2.3" fill={s}/>
+        <rect x="14" y="33" width="24" height="21" rx="6" fill="#232833" stroke={s} strokeWidth="2"/>
+        <rect x="18" y="37" width="16" height="9" rx="2" fill={s} opacity=".35"/>
+        <circle cx="26" cy="43" r="3.2" fill={s}/>
+        <rect x="5" y="35" width="6" height="16" rx="3" fill="#2a2f3a" stroke={s} strokeWidth="1.2"/>
+        <rect x="41" y="35" width="6" height="16" rx="3" fill="#2a2f3a" stroke={s} strokeWidth="1.2"/>
+        <rect x="17" y="55" width="18" height="6" rx="2.5" fill={s}/>
+      </g>
+    </svg>
+  );
+}
+
+/* ============================ OFIS SAHNASI ============================ */
+function Office(props){
+  const homePos = {
+    dir:[16,18], tan:[46,10], ijr:[74,18], str:[86,44],
+    mol:[16,66], boz:[40,72], diz:[70,70], bos:[8,40],
+  };
+  const N = AGENTS.length;
+  const meetPos = {};
+  AGENTS.forEach(function(a,i){
+    const ang = -Math.PI/2 + i*2*Math.PI/N;
+    meetPos[a.id] = [50 + 26*Math.cos(ang), 50 + 24*Math.sin(ang)];
+  });
+  meetPos['bos'] = [50,50];
+  const list = AGENTS.concat([BOSS]);
+  return (
+    <div className="stage">
+      <div className="floor"></div>
+      <div className="tbl"></div>
+      <div className="zonelbl" style={{left:'50%',top:'30%',transform:'translateX(-50%)'}}>MAJLIS ZALI</div>
+      <div className="zonelbl" style={{left:'12px',top:'12px'}}>MENING XONAM</div>
+      {list.map(function(a){
+        const pos = props.meeting ? meetPos[a.id] : homePos[a.id];
+        const isBoss = a.id==='bos';
+        const active = props.speaking===a.id;
+        return (
+          <div key={a.id} className="rob" style={{
+            left:pos[0]+'%', top:pos[1]+'%',
+            filter: active ? 'drop-shadow(0 0 8px '+a.color+')' : 'none',
+            zIndex: active?5:1
+          }}>
+            <div style={{transform:'translate(-26px,-64px)', position:'relative'}}>
+              {props.bubbles[a.id] && <div className="bub">{props.bubbles[a.id]}</div>}
+              <div className="nm" style={{color:a.color}}>{a.name}</div>
+              <Robot color={a.color} crown={isBoss}/>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ============================ ASOSIY ILOVA ============================ */
+function App(){
+  const [tasks,setTasks] = useState([]);
+  const [input,setInput] = useState('');
+  const [meeting,setMeeting] = useState(false);
+  const [speaking,setSpeaking] = useState(null);
+  const [bubbles,setBubbles] = useState({});
+  const [convo,setConvo] = useState([]);
+  const [running,setRunning] = useState(false);
+  const [activeTask,setActiveTask] = useState('');
+  const [keysV,setKeysV] = useState(0);
+  const [antKey,setAntKey] = useState(getKey('anthropic'));
+  const antSaved = getKey('anthropic');
+  void keysV;
+
+  const wait = function(ms){ return new Promise(function(r){ setTimeout(r,ms); }); };
+
+  function addTask(){
+    const v = input.trim(); if(!v) return;
+    setTasks(function(t){ return t.concat([v]); }); setInput('');
+  }
+  function removeTask(i){ setTasks(function(t){ return t.filter(function(_,x){ return x!==i; }); }); }
+
+  async function discuss(task){
+    if(running) return;
+    setRunning(true); setActiveTask(task); setConvo([]); setBubbles({}); setMeeting(true);
+    const parts = pickAgents(task);
+    setBubbles({bos:'Yangi vazifa: ' + (task.length>22?task.slice(0,22)+'…':task)});
+    await wait(1200);
+    const transcript = [];
+    for(const a of parts){
+      setSpeaking(a.id);
+      const text = await callAgent(a, task, transcript);
+      const short = text.length>34 ? text.slice(0,34)+'…' : text;
+      setBubbles(function(b){ const n=Object.assign({},b); n[a.id]=short; return n; });
+      const entry = {id:a.id, name:a.name, color:a.color, body:text, model:a.model};
+      transcript.push(entry);
+      setConvo(function(c){ return c.concat([entry]); });
+      await wait(1000);
+      setBubbles(function(b){ const n=Object.assign({},b); delete n[a.id]; return n; });
+    }
+    setSpeaking(null);
+    setRunning(false);
+  }
+  function endMeeting(){ setMeeting(false); setSpeaking(null); setBubbles({}); }
+
+  return (
+    <div className="wrap">
+      <div className="top">
+        <div style={{width:40,height:40,borderRadius:12,background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',color:'#241a06',fontWeight:800,fontSize:20}}>AI</div>
+        <div style={{flex:1}}>
+          <h1>Ibrohim AI Ofisi</h1>
+          <div className="sub">7 robot-xodim · sanoat dizayni · vazifa → majlis → muhokama</div>
+        </div>
+        {meeting
+          ? <button className="btn" onClick={endMeeting} disabled={running}>Majlisni tugatish</button>
+          : <span className="chip" style={{background:'#20242e',color:'var(--tx2)'}}>Tinch holat</span>}
+      </div>
+
+      <div className="grid">
+        <div className="card">
+          <h2>🏢 Ofis</h2>
+          <Office speaking={speaking} meeting={meeting} bubbles={bubbles}/>
+          {activeTask && <div className="muted" style={{marginTop:10}}>Muhokamada: <b style={{color:'var(--tx)'}}>{activeTask}</b></div>}
+        </div>
+
+        <div>
+          <div className="card" style={{marginBottom:16}}>
+            <h2>📝 Mening xonam</h2>
+            <div style={{display:'flex',gap:8,marginBottom:12}}>
+              <input className="tin" placeholder="Goya yoki vazifa yozing…" value={input}
+                     onChange={function(e){ setInput(e.target.value); }}
+                     onKeyDown={function(e){ if(e.key==='Enter') addTask(); }}/>
+              <button className="btn" onClick={addTask}>Qoshish</button>
+            </div>
+            {tasks.length===0 && <div className="muted">Vazifa yoq. Yozib qoshing, keyin "Muhokama" tugmasini bosing.</div>}
+            {tasks.map(function(t,i){
+              return (
+                <div className="task" key={i}>
+                  <span className="tt">{t}</span>
+                  <button className="btn primary" onClick={function(){ discuss(t); }} disabled={running}>Muhokama</button>
+                  <button className="btn" onClick={function(){ removeTask(i); }} disabled={running}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="card">
+            <h2>💬 Muhokama</h2>
+            {convo.length===0 && <div className="muted">Bu yerda robotlar suhbati chiqadi.</div>}
+            {convo.map(function(m,i){
+              return (
+                <div className="msg" key={i}>
+                  <div className="who" style={{color:m.color}}>{m.name} · <span style={{color:'var(--tx3)'}}>{m.model}</span></div>
+                  <div className="body">{m.body}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{marginTop:16}}>
+        <h2>🔑 API ulanishi</h2>
+        <div className="kv">
+          <label>Claude (Anthropic)</label>
+          <input className="tin" type="password" placeholder="sk-ant-..." value={antKey}
+                 onChange={function(e){ setAntKey(e.target.value); }} style={{flex:1}}/>
+          <button className="btn primary" onClick={function(){ saveKey('anthropic', antKey); setKeysV(function(v){return v+1;}); }}>Saqlash</button>
+        </div>
+        <div className="muted" style={{lineHeight:1.6}}>
+          {antSaved ? '🟢 Claude ulandi — Tanqidchi va Ijrochi endi haqiqiy javob beradi.'
+                    : '⚪ Kalit kiritilmagan. Anthropic kaliti bilan Tanqidchi va Ijrochi ishga tushadi.'}
+          <br/>Kalit faqat shu brauzerda saqlanadi (localStorage), boshqa hech qayerga yuborilmaydi.
+          Kalitni console.anthropic.com → API Keys dan olasiz. Gemini/Higgsfield keyin qoshiladi.
+        </div>
+      </div>
+
+      <div className="card" style={{marginTop:16}}>
+        <h2>👥 Jamoa va modellar</h2>
+        {AGENTS.map(function(a){
+          return (
+            <div className="rosterItem" key={a.id}>
+              <span className="dot" style={{background:a.color}}></span>
+              <b style={{width:100,color:a.color}}>{a.name}</b>
+              <span className="muted" style={{width:120}}>{a.role}</span>
+              <span className="chip" style={{background:a.soft,color:'#222'}}>{a.model}</span>
+              <span className="muted" style={{marginLeft:'auto'}}>{getKey(a.provider) ? '🟢 ulangan' : '⚪ ulanmagan'}</span>
+            </div>
+          );
+        })}
+        <details>
+          <summary>Qanday ulanadi?</summary>
+          <div className="muted" style={{marginTop:8,lineHeight:1.6}}>
+            Yuqoridagi "🔑 API ulanishi" qismiga Anthropic kalitini yozib "Saqlash"ni bosing.
+            Shundan keyin Tanqidchi va Ijrochi haqiqiy Claude javobini beradi. Qolgan robotlar
+            (Gemini/Higgsfield) hozircha namuna javob qaytaradi — ular keyin ulanadi.
+          </div>
+        </details>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

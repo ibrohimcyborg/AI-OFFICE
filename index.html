@@ -209,16 +209,16 @@ document.addEventListener('DOMContentLoaded', async function() {
  <div class="bd">
   <div class="sec">Jamoa — bosib alohida agentni tanlang</div>
   <div id="kaiteam"></div>
-  <div id="kaimode">Rejim: 🟢 Butun kengash (hamma robot)</div>
+  <div id="kaimode">Rejim: 🟢 Butun kengash</div>
   <div class="sec">Vazifa / g'oya</div>
-  <div class="row"><input id="kaitask" placeholder="Vazifa yozing…"/></div>
-  <div class="row"><button class="b" id="kairun" style="flex:1">Yuborish</button></div>
+  <div class="row"><input id="kaitask" placeholder="Vazifa yozing…"/><button class="b" id="kairun">Yuborish</button></div>
   <div id="kaiconv"></div>
-  <div class="row" id="kaifollowrow" style="display:none"><input id="kaifollow" placeholder="Davom ettiring…"/><button class="b" id="kaifb">↵</button></div>
+  <div class="row" id="kaifollowrow" style="display:none"><input id="kaifollow" placeholder="Davom ettiring: savol yozing…"/><button class="b" id="kaifb">↵</button><button class="g" id="kainew" title="Yangi muhokama">＋</button></div>
   <details style="margin-top:14px"><summary>🔑 API kalitlar</summary>
    <div class="row"><input id="kaig" type="password" placeholder="Gemini (AIza…) bepul"/><button class="g" data-k="google" data-src="kaig">Saqla</button></div>
    <div class="row"><input id="kaia" type="password" placeholder="Claude (sk-ant-…)"/><button class="g" data-k="anthropic" data-src="kaia">Saqla</button></div>
    <div class="row"><input id="kaio" type="password" placeholder="GPT (sk-…)"/><button class="g" data-k="openai" data-src="kaio">Saqla</button></div>
+   <div class="row"><input id="kaid" type="password" placeholder="DeepSeek (sk-…)"/><button class="g" data-k="deepseek" data-src="kaid">Saqla</button></div>
    <div class="mut" id="kaikeys"></div>
   </details>
  </div>
@@ -235,35 +235,39 @@ var AGENTS=[
  {id:'str',name:'Strateg',role:'reja',model:'Gemini 2.5 Flash',provider:'google',color:'#b39ddb'},
  {id:'boz',name:'Bozorchi',role:'bozor/sotuv',model:'Gemini 2.5 Flash',provider:'google',color:'#8fc460'},
  {id:'mol',name:'Moliyachi',role:'pul-hisob',model:'GPT-5.5',provider:'openai',color:'#5dcaa5'},
- {id:'ijr',name:'Ijrochi',role:'bajarish',model:'GPT-5.5',provider:'openai',color:'#efb64a'},
+ {id:'ijr',name:'Ijrochi',role:'bajarish/kod',model:'DeepSeek V4',provider:'deepseek',color:'#efb64a'},
  {id:'tan',name:'Tanqidchi',role:'nazorat',model:'Claude Opus 4.8',provider:'anthropic',color:'#e07a5a'},
  {id:'diz',name:'Dizayner',role:'dizayn/reklama',model:'Claude Opus 4.8',provider:'anthropic',color:'#f0a0c0'},
 ];
-var active=null;
+var active=null,lastTeam=[];
 function pick(t){t=t.toLowerCase();var s={dir:1};
  [[['pul','narx','byudjet','foyda','xarajat','daromad'],'mol'],[['bozor','raqob','mijoz','sot','reklama'],'boz'],[['reja','strateg','kelaj','kengay'],'str'],[['dizayn','logo','banner','kontent'],'diz'],[['yoz','hisobla','jadval','kod','tayyorla','bajar'],'ijr']].forEach(function(r){if(r[0].some(function(k){return t.indexOf(k)>=0;}))s[r[1]]=1;});
  s.tan=1;var out=AGENTS.filter(function(a){return s[a.id];});if(out.length<3)out=AGENTS.slice(0,5).concat([AGENTS[5]]);return out;}
 function sys(a){return 'Sen "'+a.name+'" — Ibrohimning AI ofisidagi robot-xodimsan. Roling: '+a.role+'. Ibrohim (BOSS) Yangiyol/Toshkentda oltin savdo va "Kabir Exclusive" mebel biznesini yuritadi. Ozbek tilida aniq, amaliy javob ber, kerak bolsa batafsil (raqam/misol), suvsiz.';}
-function usr(a,task,tr){var u='Vazifa: '+task+'\n\n';if(tr.length)u+='Avvalgi fikrlar:\n'+tr.map(function(m){return m.name+': '+m.body;}).join('\n')+'\n\n';return u+'Sen '+a.name+' sifatida oz hissangni qosh.';}
+function usr(a,task,tr){var u='Vazifa: '+task+'\n\n';if(tr.length)u+='Suhbat tarixi:\n'+tr.map(function(m){return m.name+': '+m.body;}).join('\n')+'\n\n';return u+'Sen '+a.name+' sifatida javob ber (suhbatni davom ettir).';}
+function oai(url,key,a,task,tr,model,extra){var body={model:model,messages:[{role:'system',content:sys(a)},{role:'user',content:usr(a,task,tr)}]};for(var k in extra)body[k]=extra[k];return fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+key,'content-type':'application/json'},body:JSON.stringify(body)});}
 async function call(a,task,tr){var key=gk(a.provider);
- if(a.provider==='anthropic'&&key){try{var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:600,system:sys(a),messages:[{role:'user',content:usr(a,task,tr)}]})});if(!r.ok)return'Claude xato ('+r.status+')';var d=await r.json();return d.content.map(function(b){return b.text||'';}).join('').trim();}catch(e){return'Claude ulanish xatosi';}}
- if(a.provider==='openai'&&key){try{var r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+key,'content-type':'application/json'},body:JSON.stringify({model:'gpt-5.5',max_completion_tokens:2000,reasoning_effort:'low',messages:[{role:'system',content:sys(a)},{role:'user',content:usr(a,task,tr)}]})});if(!r.ok)return'GPT xato ('+r.status+')';var d=await r.json();return((d.choices&&d.choices[0]&&d.choices[0].message.content)||'').trim()||'(GPT bosh)';}catch(e){return'GPT ulanish xatosi';}}
- if(a.provider==='google'&&key){try{var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},body:JSON.stringify({system_instruction:{parts:[{text:sys(a)}]},contents:[{role:'user',parts:[{text:usr(a,task,tr)}]}],generationConfig:{temperature:0.3,maxOutputTokens:700,thinkingConfig:{thinkingBudget:0}}})});if(!r.ok)return'Gemini xato ('+r.status+')';var d=await r.json();var p=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[];return p.map(function(x){return x.text||'';}).join('').trim()||'(Gemini bosh)';}catch(e){return'Gemini ulanish xatosi';}}
+ try{
+ if(a.provider==='anthropic'&&key){var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:700,system:sys(a),messages:[{role:'user',content:usr(a,task,tr)}]})});if(!r.ok)return'Claude xato ('+r.status+')';var d=await r.json();return d.content.map(function(b){return b.text||'';}).join('').trim();}
+ if(a.provider==='openai'&&key){var r=await oai('https://api.openai.com/v1/chat/completions',key,a,task,tr,'gpt-5.5',{max_completion_tokens:2000,reasoning_effort:'low'});if(!r.ok)return'GPT xato ('+r.status+')';var d=await r.json();return((d.choices&&d.choices[0]&&d.choices[0].message.content)||'').trim()||'(GPT bosh)';}
+ if(a.provider==='deepseek'&&key){var r=await oai('https://api.deepseek.com/chat/completions',key,a,task,tr,'deepseek-chat',{temperature:0.3,max_tokens:800});if(!r.ok)return'DeepSeek xato ('+r.status+')';var d=await r.json();return((d.choices&&d.choices[0]&&d.choices[0].message.content)||'').trim()||'(DeepSeek bosh)';}
+ if(a.provider==='google'&&key){var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},body:JSON.stringify({system_instruction:{parts:[{text:sys(a)}]},contents:[{role:'user',parts:[{text:usr(a,task,tr)}]}],generationConfig:{temperature:0.3,maxOutputTokens:700,thinkingConfig:{thinkingBudget:0}}})});if(!r.ok)return'Gemini xato ('+r.status+')';var d=await r.json();var p=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[];return p.map(function(x){return x.text||'';}).join('').trim()||'(Gemini bosh)';}
+ }catch(e){return a.name+' ulanish xatosi ('+(e.message||e)+')';}
  await new Promise(function(res){setTimeout(res,500);});return a.name+': ('+a.model+' ulanmagan — namuna)';}
 var conv=document.getElementById('kaiconv'),transcript=[],busy=false;
 function addMsg(m){var d=document.createElement('div');d.className='msg';d.innerHTML='<div class="who" style="color:'+m.color+'">'+m.name+(m.model?' · <span style="color:#7f889b">'+m.model+'</span>':'')+'</div><div class="body"></div>';d.querySelector('.body').textContent=m.body;conv.appendChild(d);conv.scrollTop=1e9;}
-async function run(task,team){busy=true;
+async function run(task,team){busy=true;document.getElementById('kairun').disabled=true;
  for(var i=0;i<team.length;i++){var a=team[i];var e={id:a.id,name:a.name,color:a.color,body:await call(a,task,transcript),model:a.model};transcript.push(e);addMsg(e);}
- busy=false;document.getElementById('kaifollowrow').style.display='flex';}
-function currentTeam(t){return active?[active]:pick(t);}
-document.getElementById('kairun').onclick=function(){if(busy)return;var t=document.getElementById('kaitask').value.trim();if(!t)return;transcript=[];conv.innerHTML='';addMsg({name:'Ibrohim (BOSS)',color:'#efb64a',body:t,model:''});window.__kaiT=t;run(t,currentTeam(t));};
-document.getElementById('kaifb').onclick=function(){if(busy)return;var q=document.getElementById('kaifollow').value.trim();if(!q)return;document.getElementById('kaifollow').value='';transcript.push({name:'Ibrohim (BOSS)',color:'#efb64a',body:q,model:''});addMsg({name:'Ibrohim (BOSS)',color:'#efb64a',body:q,model:''});run(window.__kaiT||q,currentTeam(q));};
+ busy=false;document.getElementById('kairun').disabled=false;document.getElementById('kaifollowrow').style.display='flex';}
+document.getElementById('kairun').onclick=function(){if(busy)return;var t=document.getElementById('kaitask').value.trim();if(!t)return;transcript=[];conv.innerHTML='';addMsg({name:'Ibrohim (BOSS)',color:'#efb64a',body:t,model:''});window.__kaiT=t;lastTeam=active?[active]:pick(t);run(t,lastTeam);};
+document.getElementById('kaifb').onclick=function(){if(busy)return;var q=document.getElementById('kaifollow').value.trim();if(!q)return;document.getElementById('kaifollow').value='';addMsg({name:'Ibrohim (BOSS)',color:'#efb64a',body:q,model:''});transcript.push({name:'Ibrohim (BOSS)',color:'#efb64a',body:q,model:''});var team=active?[active]:(lastTeam.length?lastTeam:pick(q));run(window.__kaiT||q,team);};
+document.getElementById('kainew').onclick=function(){transcript=[];conv.innerHTML='';document.getElementById('kaifollowrow').style.display='none';document.getElementById('kaitask').value='';document.getElementById('kaitask').focus();};
 document.getElementById('kaifollow').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('kaifb').click();});
 document.getElementById('kaitask').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('kairun').click();});
 function renderTeam(){var el=document.getElementById('kaiteam');el.innerHTML='';AGENTS.forEach(function(a){var s=document.createElement('span');s.className='agent'+(active&&active.id===a.id?' on':'');s.innerHTML='<span style="color:'+a.color+'">●</span> '+a.name;s.onclick=function(){active=(active&&active.id===a.id)?null:a;renderTeam();updMode();};el.appendChild(s);});
  var all=document.createElement('span');all.className='agent'+(active?'':' on');all.textContent='◆ Hammasi';all.onclick=function(){active=null;renderTeam();updMode();};el.appendChild(all);}
-function updMode(){document.getElementById('kaimode').innerHTML=active?('Rejim: 🎯 Faqat '+active.name+' ('+active.model+')'):'Rejim: 🟢 Butun kengash (hamma robot)';document.getElementById('kairun').textContent=active?('Faqat '+active.name+'ga yubor'):'Muhokama boshlash';}
-function refreshKeys(){document.getElementById('kaikeys').innerHTML=(gk('google')?'🟢':'⚪')+' Gemini · '+(gk('anthropic')?'🟢':'⚪')+' Claude · '+(gk('openai')?'🟢':'⚪')+' GPT';}
+function updMode(){document.getElementById('kaimode').innerHTML=active?('Rejim: 🎯 Faqat '+active.name+' ('+active.model+')'):'Rejim: 🟢 Butun kengash';document.getElementById('kairun').textContent=active?('→ '+active.name):'Yuborish';}
+function refreshKeys(){document.getElementById('kaikeys').innerHTML=(gk('google')?'🟢':'⚪')+' Gemini · '+(gk('anthropic')?'🟢':'⚪')+' Claude · '+(gk('openai')?'🟢':'⚪')+' GPT · '+(gk('deepseek')?'🟢':'⚪')+' DeepSeek';}
 [].forEach.call(document.querySelectorAll('#kai [data-k]'),function(b){b.onclick=function(){sk(b.dataset.k,document.getElementById(b.dataset.src).value);refreshKeys();};});
 renderTeam();updMode();refreshKeys();
 var panel=document.getElementById('kai'),ob=document.getElementById('kaiopen');
